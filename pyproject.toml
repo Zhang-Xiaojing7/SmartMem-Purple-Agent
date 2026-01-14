@@ -1,7 +1,7 @@
 [project]
-name = "agent-template"
+name = "smartmem-purple-agent"
 version = "0.1.0"
-description = "A template for A2A agents"
+description = "The purple agent of smartmem benchmark."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
