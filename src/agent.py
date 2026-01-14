@@ -32,7 +32,7 @@ class Agent:
         self.model_generation_args = os.getenv('MODEL_GEN_ARGS', {})
         
         memory_type, memory_args = os.getenv('MEMORY_MANAGER_TYPE', 'fifo'), os.getenv('MEMORY_MANAGER_ARGS', {})
-        self.memory = get_memory_manager(memory_type, memory_args)
+        self.memory = get_memory_manager(memory_type, **memory_args)
         self.tools_schema = tool_schema
         system_mem = MemoryItem(
                 role="system",
