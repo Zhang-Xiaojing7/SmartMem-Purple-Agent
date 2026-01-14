@@ -103,6 +103,7 @@ class Agent:
             await updater.add_artifact(
                 parts=[Part(root=TextPart(text=msg.content))],
                 name="Response",
+                metadata={"message_type": "text_message"}
             )
             return
         else:
@@ -136,4 +137,5 @@ class Agent:
             await updater.add_artifact(
                 parts=[Part(root=TextPart(text=msg.content)), Part(root=DataPart(data=tool_msg))],
                 name="Action",
+                metadata={"message_type": "tool_calling"}
             )
