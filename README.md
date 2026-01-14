@@ -2,6 +2,8 @@
 
 The A2A implementation of the purple agent.
 
+Green Agent serves three roles: **question setter**, **environment simulator**, and **evaluator**. Purple Agent is provided with the tool specifications but **does not have real tool implementations**—we use it to assess the LLM's ability to **operate smart home devices**, **understand and follow user instructions**, and **maintain long-term memory**. When interaction with the environment is needed, Purple Agent issues a **tool call**, which is forwarded to Green Agent for execution, and the results are then returned.
+
 ## Project Structure
 
 ```
