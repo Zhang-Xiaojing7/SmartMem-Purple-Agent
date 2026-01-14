@@ -1,14 +1,21 @@
-# A2A Agent Template
+# Purple Agent
 
-A minimal template for building [A2A (Agent-to-Agent)](https://a2a-protocol.org/latest/) agents.
+The A2A implementation of the purple agent.
 
 ## Project Structure
 
 ```
 src/
+└─ memory/
+   ├─ base.py     # Defines the basic memory manager class
+   ├─ schema.py   # Defines the basic unit of the memory block
+   └─ fifo.py     # FIFO Memory Manger
+├─ .env           # Configuration
 ├─ server.py      # Server setup and agent card configuration
 ├─ executor.py    # A2A request handling
-├─ agent.py       # Your agent implementation goes here
+├─ agent.py       # Purple agent implementation
+├─ prompts.py     # System prompt is stored here
+├─ tools.py       # Tool schema to interact with the simulator
 └─ messenger.py   # A2A messaging utilities
 tests/
 └─ test_agent.py  # Agent tests
@@ -18,18 +25,6 @@ pyproject.toml    # Python dependencies
 └─ workflows/
    └─ test-and-publish.yml # CI workflow
 ```
-
-## Getting Started
-
-1. **Create your repository** - Click "Use this template" to create your own repository from this template
-
-2. **Implement your agent** - Add your agent logic to [`src/agent.py`](src/agent.py)
-
-3. **Configure your agent card** - Fill in your agent's metadata (name, skills, description) in [`src/server.py`](src/server.py)
-
-4. **Write your tests** - Add custom tests for your agent in [`tests/test_agent.py`](tests/test_agent.py)
-
-For a concrete example of implementing an agent using this template, see this [draft PR](https://github.com/RDI-Foundation/agent-template/pull/8).
 
 ## Running Locally
 
