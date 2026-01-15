@@ -19,8 +19,8 @@ from agent import Agent
 TERMINAL_STATES = {
     TaskState.completed,
     TaskState.canceled,
-    TaskState.failed,
-    TaskState.rejected
+    # TaskState.failed,
+    # TaskState.rejected
 }
 
 
