@@ -50,7 +50,10 @@ class Agent:
 
         Use self.messenger.talk_to_agent(message, url) to call other agents.
         """
-        isreturnres = message.metadata['message_type'] == "tool_result"
+        message_text = get_message_text(message)
+        
+        _parsed = repair_json.loads(message_text)
+        isreturnres = isinstance(_parsed, list) and len(_parsed) > 0
         
         # dealing with the memory
         # CASE 1: return tool execution results
@@ -100,11 +103,12 @@ class Agent:
                 )
             )
             logger.info("[Response]: {msg.content}")
-            await updater.add_artifact(
-                parts=[Part(root=TextPart(text=msg.content))],
-                name="Response",
-                metadata={"message_type": "text_message"}
-            )
+            #FIXME: 通过updater的方法来更新消息
+            # await updater.add_artifact(
+            #     parts=[Part(root=TextPart(text=msg.content))],
+            #     name="Response",
+            #     metadata={"message_type": "text_message"}
+            # )
             return
         else:
             # add these tool calls to memory and wait for results
