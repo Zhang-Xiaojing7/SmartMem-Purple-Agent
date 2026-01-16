@@ -114,12 +114,14 @@ class Agent:
                 MemoryItem(
                     role="assistant", 
                     content=msg.content,
-                    tool_chain=None,
+                    tool_chain=[],  # Empty list instead of None
                     token_count=response.usage.completion_tokens
                 )
             )
             logger.info("[Response]: {msg.content}")
-            await updater.new_agent_message(parts=[Part(root=TextPart(text=msg.content))])
+            # Ensure content is not None before sending
+            content_text = msg.content if msg.content else ""
+            updater.new_agent_message(parts=[Part(root=TextPart(text=content_text))])
             # await updater.add_artifact(
             #     parts=[Part(root=TextPart(text=msg.content))],
             #     name="Response",
@@ -153,7 +155,9 @@ class Agent:
             logger.info("Sending interaction requests...")
             
             # send requests to green
+            # Ensure content is not None before sending
+            content_text = msg.content if msg.content else ""
             tool_msg = {"tool_calls": tool_info_to_send}
-            await updater.new_agent_message(
-                parts=[Part(root=TextPart(text=msg.content)), Part(root=DataPart(data=tool_msg))]
+            updater.new_agent_message(
+                parts=[Part(root=TextPart(text=content_text)), Part(root=DataPart(data=tool_msg))]
             )
