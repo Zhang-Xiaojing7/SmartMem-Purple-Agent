@@ -25,11 +25,27 @@ logger = logging.getLogger("smartmem_purple_agent")
 class Agent:
     def __init__(self):
         self.messenger = Messenger()
-        self.client = OpenAI(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            base_url=os.getenv('OPENAI_BASE_URL', "https://api.openai.com/v1")
-        )
-        self.model = os.getenv('MODEL_NAME', "gpt-4o")
+        
+        # Support multiple API providers
+        google_api_key = os.getenv("GOOGLE_API_KEY")
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        
+        if google_api_key:
+            # Use Gemini via OpenAI-compatible endpoint
+            api_key = google_api_key
+            base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
+            default_model = "gemini-2.0-flash"
+            logger.info("Using Google Gemini API")
+        elif openai_api_key:
+            api_key = openai_api_key
+            base_url = os.getenv('OPENAI_BASE_URL', "https://api.openai.com/v1")
+            default_model = "gpt-4o"
+            logger.info("Using OpenAI API")
+        else:
+            raise ValueError("No API key found. Set GOOGLE_API_KEY or OPENAI_API_KEY in environment.")
+        
+        self.client = OpenAI(api_key=api_key, base_url=base_url)
+        self.model = os.getenv('MODEL_NAME', default_model)
         self.model_generation_args = os.getenv('MODEL_GEN_ARGS', {})
         
         memory_type, memory_args = os.getenv('MEMORY_MANAGER_TYPE', 'fifo'), os.getenv('MEMORY_MANAGER_ARGS', {})
