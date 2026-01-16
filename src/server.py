@@ -14,7 +14,7 @@ from executor import Executor
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run the A2A agent.")
+    parser = argparse.ArgumentParser(description="Run the Purple A2A agent.")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind the server")
     parser.add_argument("--port", type=int, default=9009, help="Port to bind the server")
     parser.add_argument("--card-url", type=str, help="URL to advertise in the agent card")
@@ -36,7 +36,7 @@ def main():
     )
 
     agent_card = AgentCard(
-        name="Purple Agent",
+        name="Purple",
         description="A smart home agent that can operate intelligent devices and engage in everyday conversations with users.",
         url=args.card_url or f"http://{args.host}:{args.port}/",
         version='1.0.0',
