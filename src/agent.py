@@ -13,7 +13,8 @@ from tools import TOOL_SCHEMA
 from prompts import SYSTEM_PROMPT
 
 from openai import OpenAI
-from json_repair import repair_json
+# from json_repair import repair_json
+import json_repair
 
 system_prompt = SYSTEM_PROMPT
 tool_schema = TOOL_SCHEMA
@@ -52,7 +53,7 @@ class Agent:
         """
         message_text = get_message_text(message)
         
-        _parsed = repair_json.loads(message_text)
+        _parsed = json_repair.loads(message_text)
         isreturnres = isinstance(_parsed, list) and len(_parsed) > 0
         
         # dealing with the memory
@@ -71,11 +72,10 @@ class Agent:
             
         # CASE 2: green agent sends new instruction
         else:
-            input_text = get_message_text(message)
             self.memory.add(
                 MemoryItem(
                     role=message.role,
-                    content=input_text
+                    content=message_text
                 )
             )
 
@@ -103,7 +103,7 @@ class Agent:
                 )
             )
             logger.info("[Response]: {msg.content}")
-            #FIXME: 通过updater的方法来更新消息
+            await updater.new_agent_message(parts=[Part(root=TextPart(text=msg.content))])
             # await updater.add_artifact(
             #     parts=[Part(root=TextPart(text=msg.content))],
             #     name="Response",
@@ -118,7 +118,7 @@ class Agent:
                 func_name = tool_call.function.name
                 call_id = tool_call.id
                 raw_args_str = tool_call.function.arguments
-                args = repair_json.loads(raw_args_str)
+                args = json_repair.loads(raw_args_str)
                 tool_info_to_send.append(args)
 
                 ti = ToolInteraction(
@@ -138,8 +138,6 @@ class Agent:
             
             # send requests to green
             tool_msg = {"tool_calls": tool_info_to_send}
-            await updater.add_artifact(
-                parts=[Part(root=TextPart(text=msg.content)), Part(root=DataPart(data=tool_msg))],
-                name="Action",
-                metadata={"message_type": "tool_calling"}
+            await updater.new_agent_message(
+                parts=[Part(root=TextPart(text=msg.content)), Part(root=DataPart(data=tool_msg))]
             )
