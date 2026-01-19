@@ -48,16 +48,7 @@ class Agent:
         self.model = os.getenv('MODEL_NAME', default_model)
         self.model_generation_args = os.getenv('MODEL_GEN_ARGS', {})
         
-        memory_type, memory_args = os.getenv('MEMORY_MANAGER_TYPE', 'fifo'), os.getenv('MEMORY_MANAGER_ARGS', {})
-        self.memory = get_memory_manager(memory_type, **memory_args)
-        self.tools_schema = tool_schema
-        system_mem = MemoryItem(
-                role="system",
-                raw_data={"role": "system", "content": system_prompt},
-                content=system_prompt
-            )
-        self.memory.add(system_mem)
-        self.max_tool_use_iter = os.getenv('MAX_TOOL_USE_ITER', 3) #TODO: make it useful later...
+        # 避免记忆管理模块被反复初始化
         
     async def run(self, message: Message, updater: TaskUpdater) -> None:
         """
@@ -67,6 +58,17 @@ class Agent:
 
         Use self.messenger.talk_to_agent(message, url) to call other agents.
         """
+        if message.context_id == None: # 新的测试轮, 初始化记忆模块
+            memory_type, memory_args = os.getenv('MEMORY_MANAGER_TYPE', 'fifo'), os.getenv('MEMORY_MANAGER_ARGS', {})
+            self.memory = get_memory_manager(memory_type, **memory_args)
+            self.tools_schema = tool_schema
+            system_mem = MemoryItem(
+                    role="system",
+                    raw_data={"role": "system", "content": system_prompt},
+                    content=system_prompt
+                )
+            self.memory.add(system_mem)
+        
         message_text = get_message_text(message)
         
         _parsed = json_repair.loads(message_text)
@@ -75,6 +77,7 @@ class Agent:
         # dealing with the memory
         # CASE 1: return tool execution results
         if isreturnres: # it should be a list[dict/str]
+            logger.info(f'Received tool results: {_parsed}')
             logger.info("Adding the tool results to memory...")
             try:
                 tool_res = json.load(message.parts.root.data)['tool_results'] # datafile should be dict[str, any], so we should use {"tool_results": [...]} ?
@@ -88,6 +91,7 @@ class Agent:
             
         # CASE 2: green agent sends new instruction
         else:
+            logger.info(f'Received Instruction: {message_text}')
             self.memory.add(
                 MemoryItem(
                     role=message.role,
@@ -96,10 +100,11 @@ class Agent:
             )
 
         running_context = self.memory.get_chat_messages() # a temp context during multi-tool calls for sloving one user query
+        # await updater.update_status(
+        #     TaskState.working, new_agent_text_message("Thinking...")
+        # ) # 这应该是错误的用法 - 这会导致thinking这个消息被发给了green
         
-        await updater.update_status(
-            TaskState.working, new_agent_text_message("Thinking...")
-        )
+        logger.info('Thinking...')
         response = self.client.chat.completions.create(
             model=self.model,
             messages=running_context,
@@ -118,7 +123,7 @@ class Agent:
                     token_count=response.usage.completion_tokens
                 )
             )
-            logger.info("[Response]: {msg.content}")
+            logger.info(f"[Response]: {msg.content}")
             # Ensure content is not None before sending
             content_text = msg.content if msg.content else ""
             updater.new_agent_message(parts=[Part(root=TextPart(text=content_text))])
