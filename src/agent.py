@@ -1,15 +1,11 @@
-import os
 import logging
-import json
 
 from a2a.server.tasks import TaskUpdater
-from a2a.types import Message, TaskState, Part, TextPart, DataPart
-from a2a.utils import get_message_text, new_agent_text_message
+from a2a.types import Message, Part, TextPart
+from a2a.utils import get_message_text
 
 from messenger import Messenger
-from purple_agent import PurpleAgent
-
-import json_repair
+from purple_agent.agent import PurpleAgent
 
 
 logging.basicConfig(level=logging.DEBUG)
