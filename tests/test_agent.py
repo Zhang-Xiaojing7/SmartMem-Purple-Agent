@@ -174,12 +174,15 @@ def test_agent_card(agent):
 @pytest.mark.parametrize("streaming", [True, False])
 async def test_message(agent, streaming):
     """Test that agent returns valid A2A message format."""
-    events = await send_text_message("Hello", agent, streaming=streaming)
+    events = await send_text_message("Good Morning!", agent, streaming=streaming)
 
     all_errors = []
     for event in events:
         match event:
             case Message() as msg:
+                context_id = msg.context_id
+                msg_content = msg.parts[0].root.text
+                print(f"{context_id=}, {msg_content=}")
                 errors = validate_event(msg.model_dump())
                 all_errors.extend(errors)
 
@@ -196,4 +199,59 @@ async def test_message(agent, streaming):
     assert events, "Agent should respond with at least one event"
     assert not all_errors, f"Message validation failed:\n" + "\n".join(all_errors)
 
-# Add your custom tests here
+@pytest.mark.asyncio
+@pytest.mark.parametrize("streaming", [True, False])
+async def test_interaction_loop(agent, streaming):
+    """
+    Test a multi-turn conversation:
+    1. User sends instruction ("Set AC to 26")
+    2. Agent responds (and presumably calls a tool internally)
+    3. User simulates tool execution and sends back result
+    4. Agent confirms the action
+    """
+
+    # ==========================
+    # Round 1: 发送指令
+    # ==========================
+    instruction = "把空调温度调到 26 度"
+    print(f"\n🔵 [Round 1] User: {instruction}")
+    
+    events_1 = await send_text_message(instruction, agent, streaming=streaming)
+    
+    # 提取第一轮的 Message 对象和 context_id
+    # 使用 next() 配合生成器表达式来安全地找到第一个 Message 类型的事件
+    msg_1 = next((e for e in events_1 if isinstance(e, Message)), None)
+    assert msg_1, "Round 1 did not return a Message event"
+    
+    context_id = msg_1.context_id
+    agent_reply_1 = msg_1.parts[0].root.text
+    print(f"🟢 [Round 1] Agent: {agent_reply_1} (Context ID: {context_id})")
+
+    # 模拟一个返回结果
+    tool_output_payload = '{"status": "success", "message": "ac_temperature updated to 26", "current_value": 26}'
+    
+    # ==========================
+    # Round 2: 发送执行结果 (关键步骤)
+    # ==========================
+    print(f"🔵 [Round 2] System/User (Tool Output): {tool_output_payload}")
+    
+    # ⚠️ 关键：这里调用 send_text_message 时，必须把 context_id 传进去
+    # 如果你的 send_text_message 还没这个参数，你需要去修改它的定义
+    events_2 = await send_text_message(
+        tool_output_payload, 
+        agent, 
+        streaming=streaming,
+        context_id=context_id  # <--- 保持会话连贯性
+    )
+
+    # ==========================
+    # 验证最终结果
+    # ==========================
+    msg_2 = next((e for e in events_2 if isinstance(e, Message)), None)
+    assert msg_2, "Round 2 did not return a Message event"
+    
+    # 确保 context_id 没有变（还是同一个会话）
+    assert msg_2.context_id == context_id
+    
+    final_reply = msg_2.parts[0].root.text
+    print(f"🟢 [Round 2] Agent: {final_reply}")
