@@ -1,11 +1,10 @@
 import os
 import logging
 import json
-import re
 
-from memory import get_memory_manager, MemoryItem, ToolInteraction
-from tools import TOOL_SCHEMA
-from prompts import SYSTEM_PROMPT
+from .memory import get_memory_manager, MemoryItem, ToolInteraction
+from .tools import TOOL_SCHEMA
+from .prompts import SYSTEM_PROMPT
 
 from openai import OpenAI
 import json_repair
