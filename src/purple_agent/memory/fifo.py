@@ -11,11 +11,11 @@ class FIFOMemory(BaseMemory):
         """
         Args:
             max_tokens: the maximum token number of all the memory texts.
-            max_items: the maximum memory blocks we preserve.
+            max_items: the maximum memory blocks we preserve. tokens of the system prompt are not included.
             token_counter: estimator. if not provided, use chars / 4.
         """
         super().__init__()
-        self.storage: List[MemoryItem] = []
+        self.storage: List[MemoryItem] = [] # 除了system prompt以外的记忆 - 便于FIFO操作
         self.max_tokens = max_tokens
         self.max_items = max_items
         
@@ -26,14 +26,9 @@ class FIFOMemory(BaseMemory):
         self.token_counter = token_counter or (lambda s: len(s) // 4)
 
     def set_system_prompt(self, content: str):
-        # TODO: Support multiple system prompts if needed
         self.system_prompt = MemoryItem(role="system", content=content)
 
     def _add_to_storage(self, item: MemoryItem) -> None:
-        if item.role == "system":
-            self.system_prompt = item
-            return
-
         if item.token_count is None:
             text_to_count = item.get_display_content() or ""
             count = self.token_counter(text_to_count)
@@ -65,11 +60,9 @@ class FIFOMemory(BaseMemory):
         """
         FIFO ignores query and top_k, returning the sliding window.
         """
-        memories = []
-        if self.system_prompt:
-            memories.append(self.system_prompt)
+        memories = [self.system_prompt]
         memories.extend(self.storage)
-        return memories
+        return self.storage
 
     def get_prompt_context(self, query: str = None) -> str:
         """
@@ -88,4 +81,3 @@ class FIFOMemory(BaseMemory):
         """Reset state."""
         self.storage = []
         self.current_total_tokens = 0
-        # self.system_prompt = None # Usually we want to keep the system prompt

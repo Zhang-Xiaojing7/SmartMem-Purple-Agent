@@ -3,7 +3,7 @@ TOOL_SCHEMA = [
         "type": "function",
         "function": {
             "name": "interact_with_environment",
-            "description": "Interact with smart home devices to read their status or update their state.",
+            "description": "Interact with smart home devices to read their status or update their state. If device_id is set to environment, only the read operation can be selected, which will return the status of all devices in the current environment.",
             "parameters": {
                 "type": "object",
                 "properties": {
