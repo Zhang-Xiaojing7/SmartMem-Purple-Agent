@@ -28,9 +28,11 @@ class PurpleAgent():
         self.model = os.getenv('MODEL_NAME')
         assert self.model, "Please specify the backbone model you want to use."
         
-        self.model_generation_args = os.getenv('MODEL_GEN_ARGS', {})
+        model_generation_args = os.getenv('MODEL_GEN_ARGS', {})
+        self.model_generation_args = json.loads(model_generation_args)
         
         memory_type, memory_args = os.getenv('MEMORY_MANAGER_TYPE', 'fifo'), os.getenv('MEMORY_MANAGER_ARGS', {})
+        memory_args = json.loads(memory_args)
         self.memory = get_memory_manager(memory_type, **memory_args)
         self.tools_schema = tool_schema
         self.memory.set_system_prompt(system_prompt)
@@ -52,8 +54,7 @@ class PurpleAgent():
                 metadata = tr.get("metadata", {})
                 operation_object = metadata.get("operation_object") # 如果是读取全局状态, 操作对象就是environment
                 
-                tr.pop("metadata", None)
-                res_str = json.dumps(tr, ensure_ascii=False)
+                res_str = json.dumps(tr['message'], ensure_ascii=False)
                 key_to_res_map[operation_object] = res_str # 在没有收到结果的情况下, 如果执行正常, 不会操作一个设备2次以上
                 
             for mi in last_mem_block.tool_chain:
@@ -131,3 +132,24 @@ class PurpleAgent():
     def reset_memory(self):
         """This will clear all the memories except the system prompt."""
         self.memory.clear()
+        
+def test_purple_agent():
+    purple = PurpleAgent()
+    
+    test_msg_1 = "空调温度调到26"
+    test_res = purple.step(test_msg_1)
+    print(json_repair.loads(test_res))
+    test_tool_res = {"status": "success", "message": "ac_temperature updated to 26", "current_value": 26}
+    test_res = purple.step(json.dumps(test_tool_res))
+    print(test_res)
+    
+    # test_msg_2 = "Hello."
+    # purple.reset_memory()
+    # assert purple.memory.get_prompt_context() is None
+    # test_res = purple.step(test_msg_2)
+    # print(test_res)
+    
+if __name__ == "__main__":
+    logger.setLevel(level=logging.DEBUG)
+    test_purple_agent()
+    
