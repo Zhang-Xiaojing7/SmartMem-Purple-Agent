@@ -8,6 +8,7 @@ dependencies = [
     "a2a-sdk[http-server]>=0.3.20",
     "json-repair>=0.55.0",
     "openai>=2.15.0",
+    "python-dotenv>=1.2.1",
     "uvicorn>=0.38.0",
 ]
 

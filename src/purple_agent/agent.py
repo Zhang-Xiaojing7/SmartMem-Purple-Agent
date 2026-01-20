@@ -8,6 +8,9 @@ from .prompts import SYSTEM_PROMPT
 
 from openai import OpenAI
 import json_repair
+from dotenv import load_dotenv
+
+load_dotenv()
 
 system_prompt = SYSTEM_PROMPT
 tool_schema = TOOL_SCHEMA
