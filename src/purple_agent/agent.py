@@ -15,6 +15,7 @@ load_dotenv()
 system_prompt = SYSTEM_PROMPT
 tool_schema = TOOL_SCHEMA
 
+# logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("smartmem_purple_agent")
 
 class PurpleAgent():
@@ -56,10 +57,10 @@ class PurpleAgent():
                 
                 res_str = json.dumps(tr['message'], ensure_ascii=False)
                 key_to_res_map[operation_object] = res_str # 在没有收到结果的情况下, 如果执行正常, 不会操作一个设备2次以上
-                
+                        
             for mi in last_mem_block.tool_chain:
                 # tool_input: {"device_id": ..., "action": ..., "value": ...}
-                device_id = mi['device_id']
+                device_id = mi.tool_input['device_id']
                 mi.tool_output = key_to_res_map[device_id]
                 
             logger.info("Tool results successfully added.")
@@ -133,23 +134,27 @@ class PurpleAgent():
         """This will clear all the memories except the system prompt."""
         self.memory.clear()
         
-def test_purple_agent():
+def test_tool_interaction_loop():
     purple = PurpleAgent()
     
-    test_msg_1 = "空调温度调到26"
-    test_res = purple.step(test_msg_1)
+    test_msg = "Set the temperature to 26."
+    test_res = purple.step(test_msg)
     print(json_repair.loads(test_res))
-    test_tool_res = {"status": "success", "message": "ac_temperature updated to 26", "current_value": 26}
+    test_tool_res = [{"status": "success", "message": "ac_temperature updated to 26", "current_value": 26, "metadata": {"operation_object": "ac_temperature"}}]
     test_res = purple.step(json.dumps(test_tool_res))
     print(test_res)
+    print("=" * 40)
+    print(purple.memory.get_prompt_context())
     
-    # test_msg_2 = "Hello."
-    # purple.reset_memory()
-    # assert purple.memory.get_prompt_context() is None
-    # test_res = purple.step(test_msg_2)
-    # print(test_res)
+def test_daily_chat():
+    purple = PurpleAgent()
+    
+    test_msg = "Hello."
+    purple.reset_memory()
+    assert purple.memory.get_prompt_context() is None
+    test_res = purple.step(test_msg)
+    print(test_res)
     
 if __name__ == "__main__":
-    logger.setLevel(level=logging.DEBUG)
-    test_purple_agent()
+    test_tool_interaction_loop()
     
