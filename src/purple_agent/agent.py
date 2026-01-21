@@ -6,7 +6,7 @@ from .memory import get_memory_manager, MemoryItem, ToolInteraction
 from .tools import TOOL_SCHEMA
 from .prompts import SYSTEM_PROMPT
 
-from openai import OpenAI
+from openai import AsyncOpenAI
 import json_repair
 from dotenv import load_dotenv
 
@@ -24,7 +24,7 @@ class PurpleAgent():
         base_url = os.getenv('OPENAI_BASE_URL')
         assert api_key and base_url, "Missing API KEY and BASE URL. Please set them in environment."
         
-        self.client = OpenAI(api_key=api_key, base_url=base_url)
+        self.client = AsyncOpenAI(api_key=api_key, base_url=base_url)
         
         self.model = os.getenv('MODEL_NAME')
         assert self.model, "Please specify the backbone model you want to use."
@@ -38,7 +38,7 @@ class PurpleAgent():
         self.tools_schema = tool_schema
         self.memory.set_system_prompt(system_prompt)
         
-    def step(self, user_input: str) -> str:
+    async def step(self, user_input: str) -> str:
         _parsed = json_repair.loads(user_input)
         isreturnres = isinstance(_parsed, list) and len(_parsed) > 0
         
@@ -77,7 +77,7 @@ class PurpleAgent():
             
         running_context = self.memory.get_chat_messages()
         logger.info('Thinking...')
-        response = self.client.chat.completions.create(
+        response = await self.client.chat.completions.create(
             model=self.model,
             messages=running_context,
             tools=self.tools_schema if self.tools_schema else None,
@@ -134,27 +134,29 @@ class PurpleAgent():
         """This will clear all the memories except the system prompt."""
         self.memory.clear()
         
-def test_tool_interaction_loop():
+async def test_tool_interaction_loop():
     purple = PurpleAgent()
     
     test_msg = "Set the temperature to 26."
-    test_res = purple.step(test_msg)
+    test_res = await purple.step(test_msg)
     print(json_repair.loads(test_res))
     test_tool_res = [{"status": "success", "message": "ac_temperature updated to 26", "current_value": 26, "metadata": {"operation_object": "ac_temperature"}}]
-    test_res = purple.step(json.dumps(test_tool_res))
+    test_res = await purple.step(json.dumps(test_tool_res))
     print(test_res)
     print("=" * 40)
     print(purple.memory.get_prompt_context())
     
-def test_daily_chat():
+async def test_daily_chat():
     purple = PurpleAgent()
     
     test_msg = "Hello."
-    purple.reset_memory()
-    assert purple.memory.get_prompt_context() is None
-    test_res = purple.step(test_msg)
+    test_res = await purple.step(test_msg)
     print(test_res)
     
+    purple.reset_memory()
+    assert purple.memory.get_prompt_context() is None
+    
 if __name__ == "__main__":
-    test_tool_interaction_loop()
+    import asyncio
+    asyncio.run(test_tool_interaction_loop())
     
