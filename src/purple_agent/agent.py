@@ -2,13 +2,13 @@ import os
 import logging
 import json
 
-from .memory import get_memory_manager, MemoryItem, ToolInteraction
-from .tools import TOOL_SCHEMA
-from .prompts import SYSTEM_PROMPT
-
 from openai import AsyncOpenAI
 import json_repair
 from dotenv import load_dotenv
+
+from .memory import get_memory_manager, MemoryItem, ToolInteraction
+from .tools import TOOL_SCHEMA
+from .prompts import SYSTEM_PROMPT
 
 load_dotenv()
 
@@ -77,6 +77,7 @@ class PurpleAgent():
             
         running_context = self.memory.get_chat_messages()
         logger.info('Thinking...')
+        #TODO: 加上retry逻辑
         response = await self.client.chat.completions.create(
             model=self.model,
             messages=running_context,
@@ -86,6 +87,7 @@ class PurpleAgent():
         msg = response.choices[0].message
         
         # parse the agent response and add it to memory
+        msg2send = {"message_type": "", "message_content": ""}
         if not msg.tool_calls:
             self.memory.add(
                 MemoryItem(
@@ -97,8 +99,8 @@ class PurpleAgent():
             )
             logger.info(f"[Response]: {msg.content}")
             
-            content_text = msg.content if msg.content else ""
-            return content_text
+            msg2send['message_type'] = "text"
+            msg2send['message_content'] = msg.content if msg.content else ""
         else:
             # add these tool calls to memory and wait for results
             collected_interactions = []
@@ -128,7 +130,10 @@ class PurpleAgent():
             
             logger.info(f"Request to operate the devices: {', '.join(devices_to_operate)}")
             
-            return json.dumps(tool_info_to_send)
+            msg2send['message_type'] = "tool_calling"
+            msg2send['message_content'] = json.dumps(tool_info_to_send)
+            
+        return json.dumps(msg2send)
     
     def reset_memory(self):
         """This will clear all the memories except the system prompt."""
