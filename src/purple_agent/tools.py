@@ -1,9 +1,10 @@
+#TODO: 这个版本的prompt似乎太过简略可能引起歧义, 比如ac只是电源而不是全部的空调控制
 TOOL_SCHEMA = [
     {
         "type": "function",
         "function": {
             "name": "interact_with_environment",
-            "description": "Interact with smart home devices to read their status or update their state. If device_id is set to environment, only the read operation can be selected, which will return the status of all devices in the current environment.",
+            "description": "Interact with smart home devices to read their status or update their state. If device_id is set to 'all', only the read operation can be selected, which will return the status of all devices in the current environment.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -20,7 +21,8 @@ TOOL_SCHEMA = [
                             "fan_speed",
                             "music_volume",
                             "front_door_lock",
-                            "kitchen_light"
+                            "kitchen_light",
+                            "all"
                         ]
                     },
                     "action": {

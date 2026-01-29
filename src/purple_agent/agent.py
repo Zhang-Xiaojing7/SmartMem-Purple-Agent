@@ -39,6 +39,7 @@ class PurpleAgent():
         self.memory.set_system_prompt(system_prompt)
         
     async def step(self, user_input: str) -> str:
+        #TODO: 对应把green的返回结果也统一了, 这边可以更简单地解析.
         _parsed = json_repair.loads(user_input)
         isreturnres = isinstance(_parsed, list) and len(_parsed) > 0
         
@@ -130,7 +131,7 @@ class PurpleAgent():
             
             logger.info(f"Request to operate the devices: {', '.join(devices_to_operate)}")
             
-            msg2send['message_type'] = "tool_calling"
+            msg2send['message_type'] = "tool"
             msg2send['message_content'] = json.dumps(tool_info_to_send)
             
         return json.dumps(msg2send)
