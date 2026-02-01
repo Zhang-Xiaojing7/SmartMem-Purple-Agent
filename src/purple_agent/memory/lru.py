@@ -1,26 +1,43 @@
-from typing import List, Optional, Callable, Dict, Any
+"""
+LRU (Least Recently Used) Memory Manager
+
+This memory strategy tracks access patterns and prioritizes keeping
+recently accessed memories. When memory limits are exceeded, it removes
+the least recently accessed items first.
+
+Key features:
+- Tracks last access time for each memory item
+- Prioritizes keeping recently accessed memories
+- Better for scenarios where recent context is more important
+"""
+
+from typing import List, Optional, Callable, Dict
+from datetime import datetime
 from .base import BaseMemory
 from .schema import MemoryItem
 
 
-class FIFOMemory(BaseMemory):
+class LRUMemory(BaseMemory):
     def __init__(self,
                  max_tokens: int = 2000,
                  max_items: int = 100,
                  token_counter: Optional[Callable[[str], int]] = None):
         """
         Args:
-            max_tokens: the maximum token number of all the memory texts.
-            max_items: the maximum memory blocks we preserve. tokens of the system prompt are not included.
-            token_counter: estimator. if not provided, use chars / 4.
+            max_tokens: Maximum token count for all memory texts
+            max_items: Maximum number of memory blocks to preserve
+            token_counter: Token estimator function. If not provided, uses chars / 4
         """
         super().__init__()
-        self.storage: List[MemoryItem] = []  # Memories excluding system prompt - for FIFO operations
+        self.storage: List[MemoryItem] = []
         self.max_tokens = max_tokens
         self.max_items = max_items
 
         self.current_total_tokens = 0
         self.system_prompt: Optional[MemoryItem] = None
+
+        # Track last access time for each memory item by ID
+        self.access_times: Dict[str, datetime] = {}
 
         # Default estimator
         self.token_counter = token_counter or (lambda s: len(s) // 4)
@@ -32,7 +49,6 @@ class FIFOMemory(BaseMemory):
         if item.token_count is None:
             text_to_count = item.get_display_content() or ""
             count = self.token_counter(text_to_count)
-
             item.token_count = count
         else:
             count = item.token_count
@@ -40,31 +56,48 @@ class FIFOMemory(BaseMemory):
         self.storage.append(item)
         self.current_total_tokens += count
 
+        # Record access time
+        self.access_times[item.id] = datetime.now()
+
     def _manage_memory_constraints(self) -> None:
         """
-        Triggered automatically after every add().
+        Remove least recently used items when constraints are exceeded.
         """
         while (self.current_total_tokens > self.max_tokens or
                len(self.storage) > self.max_items) and self.storage:
 
-            removed_item = self.storage.pop(0)
+            # Find the least recently used item
+            lru_item = min(
+                self.storage,
+                key=lambda x: self.access_times.get(x.id, datetime.min)
+            )
 
-            # Defensive coding: use 0 if None (though add logic guarantees it's set)
-            count = removed_item.token_count or 0
+            # Remove it
+            self.storage.remove(lru_item)
+            count = lru_item.token_count or 0
             self.current_total_tokens -= count
 
-            # Debug log (Optional)
-            print(f"[FIFO] Pruned item {removed_item.id}, freed {count} tokens. Current: {self.current_total_tokens}")
+            # Clean up access time tracking
+            if lru_item.id in self.access_times:
+                del self.access_times[lru_item.id]
+
+            print(f"[LRU] Pruned item {lru_item.id}, freed {count} tokens. Current: {self.current_total_tokens}")
 
     def retrieve(self, query: str = None, top_k: int = 5) -> List[MemoryItem]:
         """
-        FIFO ignores query and top_k, returning the sliding window.
+        Retrieve memories and update their access times.
+        LRU returns all items but updates access times for tracking.
         """
+        # Update access times for all retrieved items
+        current_time = datetime.now()
+        for item in self.storage:
+            self.access_times[item.id] = current_time
+
         return self.storage
 
-    def get_chat_messages(self) -> List[Dict[str, Any]]:
+    def get_chat_messages(self) -> List[Dict]:
         """
-        Override to include system prompt.
+        Override to include system prompt and update access times.
         """
         items = self.retrieve()
 
@@ -80,7 +113,6 @@ class FIFOMemory(BaseMemory):
     def get_prompt_context(self, query: str = None) -> str:
         """
         Returns a plain text representation of the memory.
-        Useful for models that don't support the ChatML (list of dicts) format.
         """
         items = self.retrieve()
         if not items:
@@ -97,3 +129,4 @@ class FIFOMemory(BaseMemory):
         """Reset state."""
         self.storage = []
         self.current_total_tokens = 0
+        self.access_times = {}
